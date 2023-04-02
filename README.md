@@ -5,7 +5,4 @@
 import nltk
 nltk.download('punkt')
 ```
-04 Needs to run
-```
-python3 -m spacy download en_core_web_sm
-```
+04 Needs to follow: https://github.com/kormilitzin/med7
