@@ -47,9 +47,10 @@ htmlcov/
 nosetests.xml
 coverage.xml
 *.cover
-*.py,cover
+cover
 .hypothesis/
 .pytest_cache/
+.idea/
 
 # Translations
 *.mo
@@ -127,3 +128,8 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+/condaenv.mvyhdg57.requirements.txt
+
+# data
+*.csv
+/data/all_hourly_data.h5
