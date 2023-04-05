@@ -134,3 +134,4 @@ dmypy.json
 # data
 *.csv
 /data/all_hourly_data.h5
+embeddings/word2vec.model
