@@ -135,3 +135,6 @@ dmypy.json
 *.csv
 /data/all_hourly_data.h5
 embeddings/word2vec.model
+*.p
+*.pkl
+
