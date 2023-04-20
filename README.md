@@ -45,7 +45,7 @@ python src/train_val_test_prep.py
 ```
 
 ## Step 6.
-Training time series baseline model, multimodal baseline model, and proposed CNN model.
+Train time series baseline model, multimodal baseline model, and proposed CNN model. Each model has been modulized with hyperparameters as inputs. Users can build and train their own model by changing the hyperparamters, such as `batch_size`, `filter_num` (number of filters in CNN architecture) , `unit_sizes` (unit size of hidden layer), and so on.
 ```
 python src/train_model.py
 ```
