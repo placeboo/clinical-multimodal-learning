@@ -33,7 +33,7 @@ python src/data_prep.py
 ```
 
 ## Step 4. 
-Download pretrained `Word2Vec` embeddings into `embeddings` folder. Link. 
+Download pretrained `Word2Vec` embeddings into `embeddings` folder. [Link](https://drive.google.com/file/d/14EOqvvjJ8qUxihQ_SFnuRsjK9pOTrP-6/view). 
 ```
 python src/embedding.py
 ```
