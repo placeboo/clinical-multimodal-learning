@@ -7,7 +7,7 @@ from keras.models import Model
 from keras.layers import Flatten, Dense, Dropout, concatenate, Input, Conv1D, GRU, LSTM, GlobalMaxPooling1D
 from keras.optimizers import Adam
 from keras.backend import clear_session, get_session
-from keras.callbacks import EarlyStopping, ModelCheckpoint
+from keras.callbacks import EarlyStopping, ModelCheckpoint,ReduceLROnPlateau
 import tensorflow as tf
 from sklearn.metrics import average_precision_score, roc_auc_score, accuracy_score, f1_score
 import gc
@@ -56,7 +56,7 @@ def save_scores(framework, predictions, probs, ground_truth, model_name,
         file_name = str(sequence_name) + "-" + str(hidden_unit_size) + "-" + model_name
         file_name = file_name + "-" + problem_type + "-" + str(iteration) + "-" + type_of_ner + "-avg-.p"
 
-    if framework == 'cnn':
+    if framework == 'proposedmodel':
         file_name = str(sequence_name) + "-" + str(hidden_unit_size) + "-" + model_name
         file_name = file_name + "-" + problem_type + "-" + str(iteration) + "-" + type_of_ner + "-cnn-.p"
 
@@ -96,14 +96,9 @@ def create_dataset(dict_of_ner):
     return np.asarray(temp_data)
 
 
-def avg_ner_model(layer_name, number_of_unit, embedding_name):
-    if embedding_name == "concat":
-        input_dimension = 200
-    else:
-        input_dimension = 100
-
+def avg_ner_model(layer_name, number_of_unit):
+    input_dimension = 100
     sequence_input = Input(shape=(24, 104))
-
     input_avg = Input(shape=(input_dimension,), name="avg")
     #     x_1 = Dense(256, activation='relu')(input_avg)
     #     x_1 = Dropout(0.3)(x_1)
@@ -132,11 +127,8 @@ def avg_ner_model(layer_name, number_of_unit, embedding_name):
     return model
 
 
-def get_subvector_data(size, embed_name, data):
-    if embed_name == "concat":
-        vector_size = 200
-    else:
-        vector_size = 100
+def get_subvector_data(size, data):
+    vector_size = 100
 
     x_data = {}
     for k, v in data.items():
@@ -157,12 +149,8 @@ def get_subvector_data(size, embed_name, data):
     return x_data
 
 
-def proposedmodel(layer_name, number_of_unit, embedding_name, ner_limit, num_filter):
-    if embedding_name == "concat":
-        input_dimension = 200
-    else:
-        input_dimension = 100
-
+def proposedmodel(layer_name, number_of_unit, ner_limit, num_filter):
+    input_dimension = 100
     sequence_input = Input(shape=(24, 104))
 
     input_img = Input(shape=(ner_limit, input_dimension), name="cnn_input")
@@ -271,3 +259,138 @@ def train_baseline(x_train, y_train,
                     # del model
                     clear_session()
                     gc.collect()
+
+def train_multimodal_baseline(x_train, x_train_ner, y_train,
+                   x_dev, x_dev_ner, y_dev,
+                   x_test, x_test_ner, y_test,
+                   epoch_num=100,
+                   model_patience=5,
+                   monitor_criteria='val_loss',
+                   batch_size=64,
+                   unit_sizes=None,
+                   iter_num=11,
+                   target_problems=None,
+                   layers=None,
+                   type_of_ner=None):
+    if layers is None:
+        layers = ["LSTM", "GRU"]
+    if unit_sizes is None:
+        unit_sizes = [128, 256]
+    if target_problems is None:
+        target_problems = ['mort_hosp', 'mort_icu', 'los_3', 'los_7']
+    if type_of_ner is None:
+        type_of_ner = 'new'
+
+    for each_layer in layers:
+        print("Layer: ", each_layer)
+        for each_unit_size in unit_sizes:
+            print("Hidden unit: ", each_unit_size)
+            for iteration in range(1, iter_num):
+                print("Iteration number: ", iteration)
+                for each_problem in target_problems:
+                    print("Problem type: ", each_problem)
+                    print("__________________")
+
+                    early_stopping_monitor = EarlyStopping(monitor=monitor_criteria, patience=model_patience)
+                    best_model_name = "avg-word2vec" + "-" + str(each_problem) + "-" + "best_model.hdf5"
+                    checkpoint = ModelCheckpoint(best_model_name, monitor='val_loss', verbose=1,
+                                                 save_best_only=True, mode='min', period=1)
+
+                    callbacks = [early_stopping_monitor, checkpoint]
+
+                    model = avg_ner_model(each_layer, each_unit_size)
+
+                    model.fit([x_train, x_train_ner], y_train[each_problem], epochs=epoch_num, verbose=1,
+                              validation_data=([x_dev, x_dev_ner], y_dev[each_problem]), callbacks=callbacks,
+                              batch_size=batch_size)
+
+                    model.load_weights(best_model_name)
+
+                    probs, predictions = make_prediction(model, [x_test, x_test_ner])
+
+                    save_scores(framework='multimodal_baseline',
+                                predictions=predictions,
+                                probs=probs,
+                                ground_truth=y_test[each_problem].values,
+                                model_name='word2vec',
+                                problem_type=each_problem,
+                                iteration=iteration, hidden_unit_size=each_unit_size,
+                                type_of_ner=type_of_ner,
+                                sequence_name=each_layer)
+
+                    reset_keras(model)
+                    # del model
+                    clear_session()
+                    gc.collect()
+
+
+def train_proposedmodel(x_train, x_train_ner, y_train,
+                   x_dev, x_dev_ner, y_dev,
+                   x_test, x_test_ner, y_test,
+                    ner_representation_limit=64,
+                    filter_num=64,
+                   epoch_num=100,
+                   model_patience=5,
+                   monitor_criteria='val_loss',
+                   batch_size=64,
+                   unit_sizes=None,
+                   iter_num=11,
+                   target_problems=None,
+                   layers=None,
+                   type_of_ner=None):
+
+    if layers is None:
+        layers = ["LSTM", "GRU"]
+    if unit_sizes is None:
+        unit_sizes = [128, 256]
+    if target_problems is None:
+        target_problems = ['mort_hosp', 'mort_icu', 'los_3', 'los_7']
+    if type_of_ner is None:
+        type_of_ner = 'new'
+    for each_layer in layers:
+        print("Layer: ", each_layer)
+        for each_unit_size in unit_sizes:
+            print("Hidden unit: ", each_unit_size)
+            for iteration in range(1, iter_num):
+                print("Iteration number: ", iteration)
+                for each_problem in target_problems:
+                    print("Problem type: ", each_problem)
+                    print("__________________")
+
+                    early_stopping_monitor = EarlyStopping(monitor=monitor_criteria, patience=model_patience)
+
+                    best_model_name = str(ner_representation_limit) + "-basiccnn1d-word2vec" + "-" + str(each_problem) + "-" + "best_model.hdf5"
+
+                    checkpoint = ModelCheckpoint(best_model_name, monitor=monitor_criteria, verbose=1,
+                                                 save_best_only=True, mode='min')
+
+                    reduce_lr = ReduceLROnPlateau(monitor=monitor_criteria, factor=0.2,
+                                                  patience=2, min_lr=0.00001, epsilon=1e-4, mode='min')
+
+                    callbacks = [early_stopping_monitor, checkpoint, reduce_lr]
+
+                    # model = textCNN(sequence_model, sequence_hidden_unit, embed_name, ner_representation_limit)
+                    model = proposedmodel(each_layer, each_unit_size,
+                                          ner_representation_limit, filter_num)
+
+                    model.fit([x_train, x_train_ner], y_train[each_problem], epochs=epoch_num, verbose=1,
+                              validation_data=([x_dev, x_dev_ner], y_dev[each_problem]), callbacks=callbacks,
+                              batch_size=batch_size)
+
+                    probs, predictions = make_prediction(model, [x_test, x_test_ner])
+                    model.load_weights(best_model_name)
+                    save_scores(framework='proposedmodel',
+                                predictions=predictions,
+                                probs=probs,
+                                ground_truth=y_test[each_problem].values,
+                                model_name='word2vec',
+                                problem_type=each_problem,
+                                iteration=iteration,
+                                hidden_unit_size=each_unit_size,
+                                type_of_ner=type_of_ner,
+                                sequence_name=each_layer)
+                    del model
+                    clear_session()
+                    gc.collect()
+
+

@@ -1,31 +1,7 @@
 import pandas as pd
-from models import train_baseline
-import os
 import numpy as np
-from gensim.models import Word2Vec, FastText
-# import glove
-# from glove import Corpus
-
+from models import train_baseline, create_dataset, train_multimodal_baseline, train_proposedmodel, get_subvector_data
 import collections
-import gc
-
-import keras
-from keras import backend as K
-from keras import regularizers
-from keras.models import Sequential, Model
-from keras.layers import Flatten, Dense, Dropout, Input, concatenate, Activation, Concatenate, LSTM, GRU
-from keras.layers import Input, Conv2D, MaxPooling2D, UpSampling2D, Conv1D, BatchNormalization, GRU, Convolution1D, LSTM
-from keras.layers import UpSampling1D, MaxPooling1D, GlobalMaxPooling1D, GlobalAveragePooling1D, MaxPool1D
-
-from keras.optimizers import Adam
-
-from keras.callbacks import EarlyStopping, ModelCheckpoint, History, ReduceLROnPlateau
-from keras.utils import np_utils
-from keras.backend import set_session, clear_session, get_session
-import tensorflow as tf
-
-from sklearn.utils import class_weight
-from sklearn.metrics import average_precision_score, roc_auc_score, accuracy_score, f1_score
 
 import warnings
 
@@ -46,6 +22,10 @@ train_ids = pd.read_pickle("data/" + type_of_ner + "_train_ids.pkl")
 dev_ids = pd.read_pickle("data/" + type_of_ner + "_dev_ids.pkl")
 test_ids = pd.read_pickle("data/" + type_of_ner + "_test_ids.pkl")
 
+temp_train_ner = dict((k, ner_word2vec[k]) for k in train_ids)
+temp_dev_ner = dict((k, ner_word2vec[k]) for k in dev_ids)
+temp_test_ner = dict((k, ner_word2vec[k]) for k in test_ids)
+
 # baseline model training
 train_baseline(x_train=x_train_lstm, y_train=y_train,
                x_dev=x_dev_lstm, y_dev=y_dev,
@@ -56,3 +36,43 @@ train_baseline(x_train=x_train_lstm, y_train=y_train,
                unit_sizes=[128, 256],
                iter_num=11,
                layers=["LSTM", "GRU"])
+
+# multimodel_baseline model
+x_train_ner = create_dataset(temp_train_ner)
+x_dev_ner = create_dataset(temp_dev_ner)
+x_test_ner = create_dataset(temp_test_ner)
+
+train_multimodal_baseline(x_train=x_train_lstm, x_train_ner=x_train_ner, y_train=y_train,
+                          x_dev=x_dev_lstm, x_dev_ner=x_dev_ner, y_dev=y_dev,
+                          x_test=x_test_lstm, x_test_ner=x_test_ner, y_test=y_test,
+                          epoch_num=100,
+                          model_patience=5,
+                          batch_size=64,
+                          iter_num=11,
+                          unit_sizes=[128, 256],
+                          layers=['GRU'])
+
+# train proposed model
+ner_representation_limit = 64
+x_train_dict = get_subvector_data(ner_representation_limit, temp_train_ner)
+x_dev_dict = get_subvector_data(ner_representation_limit, temp_dev_ner)
+x_test_dict = get_subvector_data(ner_representation_limit, temp_test_ner)
+x_train_dict_sorted = collections.OrderedDict(sorted(x_train_dict.items()))
+x_dev_dict_sorted = collections.OrderedDict(sorted(x_dev_dict.items()))
+x_test_dict_sorted = collections.OrderedDict(sorted(x_test_dict.items()))
+
+x_train_ner = np.asarray(list(x_train_dict_sorted.values()))
+x_dev_ner = np.asarray(list(x_dev_dict_sorted.values()))
+x_test_ner = np.asarray(list(x_test_dict_sorted.values()))
+
+train_proposedmodel(x_train=x_train_lstm, x_train_ner=x_train_ner, y_train=y_train,
+                    x_dev=x_dev_lstm, x_dev_ner=x_dev_ner, y_dev=y_dev,
+                    x_test=x_test_lstm, x_test_ner=x_test_ner, y_test=y_test,
+                    epoch_num=100,
+                    model_patience=5,
+                    batch_size=64,
+                    iter_num=11,
+                    unit_sizes=[256],
+                    filter_num=32,
+                    ner_representation_limit=ner_representation_limit,
+                    layers=['GRU'])
