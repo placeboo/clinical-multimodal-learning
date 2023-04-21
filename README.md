@@ -32,19 +32,19 @@ In this step, we extract time series features, select and preprocess eligiable c
 python src/data_prep.py
 ```
 
-## Step 4. 
+## Step 4. Embedding\
 Download pretrained `Word2Vec` embeddings into `embeddings` folder. [Link](https://drive.google.com/file/d/14EOqvvjJ8qUxihQ_SFnuRsjK9pOTrP-6/view). 
 ```
 python src/embedding.py
 ```
 
-## Step 5.
+## Step 5. Data Split
 Prepare data sets: traininng data, validation data, and testing data.
 ```
 python src/train_val_test_prep.py
 ```
 
-## Step 6.
+## Step 6. Model Train
 Train time series baseline model, multimodal baseline model, and proposed CNN model. Each model has been modulized with hyperparameters as inputs. Users can build and train their own model by changing the hyperparamters, such as `batch_size`, `filter_num` (number of filters in CNN architecture) , `unit_sizes` (unit size of hidden layer), and so on.
 ```
 python src/train_model.py
