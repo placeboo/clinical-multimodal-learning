@@ -50,3 +50,11 @@ Train time series baseline model, multimodal baseline model, and proposed CNN mo
 python src/train_model.py
 ```
 
+## Step 7. Evaluation
+After finding the best model, the metrics is in `clinical-multimodal-learning/src/evaluation.ipynb`
+
+# Relavent Data
+Note that the following link can only be accessed via @gatech.edu email.
+- Input data for the models is [here](https://gtvault.sharepoint.com/:f:/s/CSE6252-BD/Eiz1Ez6UcxVIsL1mUNdBkagBgnBcSmlAW5B_sKsb0nqIZA?e=1JgMVo)
+- Models are [here](https://gtvault.sharepoint.com/:f:/s/CSE6252-BD/EtnuwXOZk7JHlhkte_0jE0wBZpJU27FZYfNxFEAb9OjEQA?e=FJzdjN)
+- Results are [here](https://gtvault.sharepoint.com/:f:/s/CSE6252-BD/Eug1uIPwB25AjQ4J9nkyHhoB4vMwz2VztTQGbsmPQSeyUg?e=ItiNYD)
